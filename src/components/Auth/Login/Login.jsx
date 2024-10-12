@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";  // Import Link from react-router-dom
 import bg from "../../../assets/bg.mp4";
 import bgpic from "../../../assets/bg.png";
 import "./Login.css";
@@ -14,13 +15,12 @@ const Login = () => {
         </div>
 
         <div className="login-section">
-
           <div className="login-box">
 
             <div className="login-box-one">
               <h2>Log in</h2>
-              <input type="email" placeholder="Email" />
-              <input type="password" placeholder="Password" />
+              <input type="email" placeholder="Email" required/>
+              <input type="password" placeholder="Password" required/>
               <p>Forgot Password?</p>
             </div>
 
@@ -29,12 +29,11 @@ const Login = () => {
               <button className="btn">Log in</button>
               <button className="btn google-btn">Log in with Google</button>
               <p className="sign-up-account">
-                Don't have account? <a href="#">Sign Up</a>
+                Don't have an account? <Link to="/signup">Sign Up</Link> {/* Updated Link */}
               </p>
             </div>
 
           </div>
-
         </div>
       </div>
     </div>

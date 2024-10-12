@@ -122,6 +122,10 @@ line-height: normal;
     color: #fff;
 }
 
+.login-box-two .btn:hover{
+    cursor: pointer;
+}
+
 .login-box-two .sign-up-accont a{
     font-weight: 500;
     text-decoration: underline;
