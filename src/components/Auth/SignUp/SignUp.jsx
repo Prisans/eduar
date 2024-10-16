@@ -1,4 +1,5 @@
 import React from 'react'
+import "./Signup.css";
 import bg from "../../../assets/bg.mp4";
 import bgpic from "../../../assets/bg.png";
 import { Link } from "react-router-dom";
@@ -25,7 +26,7 @@ const SignUp = () => {
     
                 <div className="login-box-two">
                   <p className="border"></p>
-                  <button className="btn">Sign Up</button>
+                  <button className="btn signup-btn">Sign Up</button>
                   <button className="btn google-btn">Log in with Google</button>
                   <p className="sign-up-account">
                     Have an account? <Link to='/login' >login</Link>

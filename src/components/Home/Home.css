@@ -26,12 +26,14 @@
   
   .god-video {
     z-index: 1;
-    opacity: 0.3;
+    opacity: 0.4;
     mix-blend-mode: screen;
   }
   
   .background-video {
     z-index: 0;
+    filter: blur(15px);
+    transform: scale(2);
   }
   
   .navbar {
