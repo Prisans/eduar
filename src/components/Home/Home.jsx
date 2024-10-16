@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import './Home.css';
 import backgroundVideo from '../../assets/bg.mp4';
@@ -7,15 +7,54 @@ import godVideo from '../../assets/god.mp4';
 const Home = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const videoRef = useRef(null);
 
   const handleStartNow = () => {
-    setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000);
+    if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+      setIsScanning(true);
+      startCamera();
+    } else {
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 3000);
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Error accessing the camera:", err);
+      setIsScanning(false);
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 3000);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const tracks = videoRef.current.srcObject.getTracks();
+      tracks.forEach(track => track.stop());
+    }
   };
 
   const toggleNav = () => {
     setIsNavOpen(!isNavOpen);
   };
+
+  const handleCloseScanner = () => {
+    setIsScanning(false);
+    stopCamera();
+  };
+
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   return (
     <div className="home">
@@ -57,8 +96,15 @@ const Home = () => {
       {showPopup && (
         <div className="popup-overlay">
           <div className="popup">
-            <p>Open it from Mobile</p>
+            <p>Camera access is not available or denied.</p>
           </div>
+        </div>
+      )}
+      {isScanning && (
+        <div className="scanner-overlay">
+          <h2>Ready to Scan</h2>
+          <video ref={videoRef} autoPlay playsInline className="scanner-video" />
+          <button onClick={handleCloseScanner}>Close Scanner</button>
         </div>
       )}
     </div>
