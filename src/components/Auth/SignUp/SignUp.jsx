@@ -29,7 +29,7 @@ const SignUp = () => {
                   <button className="btn signup-btn">Sign Up</button>
                   <button className="btn google-btn">Log in with Google</button>
                   <p className="sign-up-account">
-                    Have an account? <Link to='/login' >login</Link>
+                    Have an account dude? <Link to='/login' >login</Link>
                   </p>
                 </div>
     
