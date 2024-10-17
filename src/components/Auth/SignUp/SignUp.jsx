@@ -12,7 +12,7 @@ import { Auth } from '../firebase';
 
 
 const SignUp = () => {
-
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -24,9 +24,6 @@ const SignUp = () => {
     try{
        const userCredential = await createUserWithEmailAndPassword(Auth,email,password);
        console.log(userCredential);
-       const user = userCredential.user;
-       localStorage.setItem('token', user.accessToken);
-       localStorege.setItem('user',JSON.stringify(user));
        navigate("/");
     } catch (error){
       console.error(error);
@@ -67,7 +64,7 @@ const SignUp = () => {
                 <div  onSubmit={handleSubmit} className="login-box-one">
                   <h2>Sign Up</h2>
                   
-                  <input type="text" placeholder="Name"
+                  <input type="text" placeholder="Name" value={name}
                     onChange ={ (e) => setName(e.target.value)}  />
                     <input type="email" placeholder="Email" 
                       onChange={ (e) => setEmail(e.target.value)} />

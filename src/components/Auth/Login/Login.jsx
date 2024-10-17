@@ -10,7 +10,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Auth } from '../firebase';
 
 const Login = () =>{   
- 
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
@@ -21,9 +21,6 @@ const Login = () =>{
     try{
        const userCredential = await signInWithEmailAndPassword(Auth,email,password);
        console.log(userCredential);
-       const user = userCredential.user;
-       localStorage.setItem('token', user.accessToken);
-       localStorege.setItem('user',JSON.stringify(user));
        navigate("/");
     } catch (error){
       console.error(error);
@@ -38,8 +35,6 @@ const Login = () =>{
 
        const result = await signInWithPopup(Auth , GoogleAuthProvider);
        console.log(result);
-       localStorage.setItem('token', user.accessToken);
-       localStorege.setItem('user',JSON.stringify(user));
        navigate("/");
 
     } catch (error){
