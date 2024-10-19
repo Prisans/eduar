@@ -5,39 +5,71 @@ import backgroundVideo from '../../assets/bg.mp4';
 import godVideo from '../../assets/god.mp4';
 
 const Home = () => {
-  const [showPopup, setShowPopup] = useState(false);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   const handleStartNow = () => {
-    if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
-      setIsScanning(true);
-      startCamera();
-    } else {
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 3000);
-    }
+    console.log("Start Now button clicked");
+    setIsScanning(true);
   };
 
+  useEffect(() => {
+    if (isScanning) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [isScanning]);
+
   const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+    console.log("Starting camera...");
+    if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' }
+        });
+        console.log("Camera stream obtained:", stream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play();
+            console.log("Camera is now active and scanning");
+          };
+        } else {
+          console.error("Video ref is null");
+        }
+      } catch (err) {
+        console.error("Error accessing the camera:", err);
+        alert(`Error accessing the camera: ${err.message}. Please make sure you've granted camera permissions and try again.`);
+        setIsScanning(false);
       }
-    } catch (err) {
-      console.error("Error accessing the camera:", err);
+    } else {
+      console.error("getUserMedia is not supported");
+      alert("Camera access is not available on this device or browser.");
       setIsScanning(false);
-      setShowPopup(true);
-      setTimeout(() => setShowPopup(false), 3000);
     }
   };
 
   const stopCamera = () => {
+    console.log("Stopping camera...");
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
       tracks.forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+      console.log("Camera stopped");
+    }
+  };
+
+  const captureImage = () => {
+    console.log("Capturing image...");
+    if (videoRef.current && canvasRef.current) {
+      const context = canvasRef.current.getContext('2d');
+      context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+      const imageDataUrl = canvasRef.current.toDataURL('image/jpeg');
+      console.log("Image captured:", imageDataUrl.substring(0, 50) + "...");
+      alert("Image captured! You can process it further or send it to your backend.");
     }
   };
 
@@ -46,15 +78,9 @@ const Home = () => {
   };
 
   const handleCloseScanner = () => {
+    console.log("Closing scanner...");
     setIsScanning(false);
-    stopCamera();
   };
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
 
   return (
     <div className="home">
@@ -88,22 +114,27 @@ const Home = () => {
         <h1>
           Bring Learning to Life with
           <br />
-          <span className="ar-text">Lauda!</span>
+          <span className="ar-text">AR!</span>
         </h1>
         
         <button className="start-now-btn" onClick={handleStartNow}>Start Now</button>
       </div>
-      {showPopup && (
-        <div className="popup-overlay">
-          <div className="popup">
-            <p>Camera access is not available or denied.</p>
-          </div>
-        </div>
-      )}
       {isScanning && (
         <div className="scanner-overlay">
-          <h2>Ready to Scan</h2>
-          <video ref={videoRef} autoPlay playsInline className="scanner-video" />
+          <h2>Scan Diagram</h2>
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            className="scanner-video"
+            style={{ width: '100%', maxWidth: '640px', height: 'auto' }}
+            onLoadedMetadata={() => console.log("Video metadata loaded")}
+            onPlay={() => console.log("Video started playing")}
+            onError={(e) => console.error("Video error:", e)}
+          />
+          <p>Camera status: {videoRef.current && videoRef.current.srcObject ? 'Active' : 'Inactive'}</p>
+          <canvas ref={canvasRef} style={{ display: 'none' }} width="640" height="480" />
+          <button onClick={captureImage}>Scan</button>
           <button onClick={handleCloseScanner}>Close Scanner</button>
         </div>
       )}
