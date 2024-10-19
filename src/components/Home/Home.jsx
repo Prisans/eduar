@@ -88,7 +88,7 @@ const Home = () => {
         <h1>
           Bring Learning to Life with
           <br />
-          <span className="ar-text">AR!</span>
+          <span className="ar-text">Lauda!</span>
         </h1>
         
         <button className="start-now-btn" onClick={handleStartNow}>Start Now</button>
