@@ -2,7 +2,7 @@ import React , {useState} from 'react';
 import bg from "../../../assets/bg.mp4";
 import bgpic from "../../../assets/bg.png";
 import { Link } from "react-router-dom";
-import "./signUp.css";
+import "./SignUp.css";
 import { useNavigate } from 'react-router-dom';
 import {
          signInWithPopup , 
