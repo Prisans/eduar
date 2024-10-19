@@ -69,7 +69,7 @@ const Home = () => {
         </video>
       </div>
       <nav className={`navbar ${isNavOpen ? 'open' : ''}`}>
-        <Link to="/" className="navbar-logo">Logo</Link>
+        <Link to="/" className="navbar-logo">EduAr</Link>
         <button className="nav-toggle" onClick={toggleNav}>
           {isNavOpen ? '✕' : '☰'}
         </button>
