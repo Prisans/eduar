@@ -28,6 +28,8 @@
   object-fit: cover;
   margin-bottom: 20px;
   background-color: #000;
+  border: 2px solid #2196F3;
+  box-shadow: 0 0 0 4px rgba(33, 150, 243, 0.3);
 }
 
 .scanner-overlay button {
@@ -78,4 +80,23 @@
   margin-bottom: 15px;
   font-size: 0.9rem;
   max-width: 80%;
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 5px;
+  line-height: 1.4;
+}
+
+.scanner-overlay::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80%;
+  max-width: 600px;
+  height: 60%;
+  border: 2px solid rgba(33, 150, 243, 0.7);
+  border-radius: 10px;
+  pointer-events: none;
+  z-index: 1001;
 }

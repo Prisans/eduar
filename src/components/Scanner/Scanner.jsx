@@ -13,12 +13,32 @@ const Scanner = ({ onClose }) => {
   useEffect(() => {
     const loadModel = async () => {
       try {
-        const loadedModel = await mobilenet.load();
+        if (!tf.findBackend('webgl')) {
+          console.error('WebGL not found');
+          setError('WebGL is not supported in your browser. Please try a different browser.');
+          return;
+        }
+
+        await tf.setBackend('webgl');
+        await tf.ready();
+        
+        console.log('TensorFlow backend ready:', tf.getBackend());
+        
+        const loadedModel = await mobilenet.load({
+          version: 2,
+          alpha: 1.0
+        });
+        
         setModel(loadedModel);
-        console.log("MobileNet model loaded");
+        console.log("MobileNet model loaded successfully");
       } catch (err) {
-        console.error("Error loading MobileNet model:", err);
-        setError("Failed to load image recognition model. Please try again.");
+        console.error("Detailed error loading model:", {
+          message: err.message,
+          stack: err.stack,
+          backend: tf.getBackend(),
+          backends: tf.engine().registryFactory.getKeys()
+        });
+        setError(`Failed to load model: ${err.message}. Please check your internet connection and try again.`);
       }
     };
     loadModel();
@@ -67,27 +87,91 @@ const Scanner = ({ onClose }) => {
     }
   };
 
+  const preprocessImage = (canvas) => {
+    const tensor = tf.browser.fromPixels(canvas)
+      .resizeNearestNeighbor([224, 224])
+      .toFloat()
+      .expandDims();
+    return tensor;
+  };
+
   const captureImage = async () => {
     if (videoRef.current && canvasRef.current && model) {
       const context = canvasRef.current.getContext('2d');
-      context.drawImage(videoRef.current, 0, 0, canvasRef.current.width, canvasRef.current.height);
+      
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+      
+      context.clearRect(0, 0, videoWidth, videoHeight);
+      context.drawImage(videoRef.current, 0, 0, videoWidth, videoHeight);
       
       try {
-        const predictions = await model.classify(canvasRef.current);
-        console.log("Image analysis result:", predictions);
+        const tensor = preprocessImage(canvasRef.current);
+        
+        // Get more predictions for better accuracy
+        const predictions = await model.classify(tensor, 20);
+        console.log("Raw predictions:", predictions);
 
-        const heartRelated = predictions.some(p => 
-          p.className.toLowerCase().includes('heart') || 
-          p.className.toLowerCase().includes('cardiac') ||
-          p.className.toLowerCase().includes('organ') ||
-          p.className.toLowerCase().includes('anatomy')
-        );
+        // Simplified terms for apple detection
+        const appleRelatedTerms = [
+          { term: 'apple', weight: 2.0 },
+          { term: 'fruit', weight: 1.5 },
+          { term: 'red delicious', weight: 1.5 },
+          { term: 'granny smith', weight: 1.5 },
+          { term: 'red apple', weight: 1.5 },
+          { term: 'green apple', weight: 1.5 },
+          { term: 'produce', weight: 1.0 },
+          { term: 'food', weight: 0.5 }
+        ];
 
-        if (heartRelated) {
-          alert("Heart-related image detected!");
+        const matchedPredictions = predictions.map(prediction => {
+          const predictionText = prediction.className.toLowerCase();
+          let score = 0;
+          let matchedTerms = [];
+
+          appleRelatedTerms.forEach(({ term, weight }) => {
+            if (predictionText.includes(term)) {
+              score += prediction.probability * weight;
+              matchedTerms.push(term);
+            }
+          });
+
+          return {
+            ...prediction,
+            score,
+            matchedTerms
+          };
+        }).filter(p => p.score > 0);
+
+        matchedPredictions.sort((a, b) => b.score - a.score);
+        const totalScore = matchedPredictions.reduce((sum, pred) => sum + pred.score, 0);
+        
+        // Lower threshold for apple detection since it's simpler
+        const isApple = totalScore > 0.1 || 
+                       (matchedPredictions.length > 0 && matchedPredictions[0].score > 0.2);
+
+        if (isApple) {
+          const bestMatch = matchedPredictions[0];
+          
+          alert(`Apple Detected! 🍎\n` +
+                `Confidence: ${Math.round(totalScore * 100)}%\n` +
+                `Type: ${bestMatch.className}`);
+          
+          console.log("Matched predictions:", matchedPredictions);
+          console.log("Total score:", totalScore);
+          console.log("Best match:", bestMatch);
         } else {
-          alert("No heart-related image detected. Make sure the image is clear and contains a heart diagram or illustration.");
+          alert("No apple image detected. Please ensure:\n\n" +
+                "1. The apple image is clear and centered\n" +
+                "2. The image fills most of the camera frame\n" +
+                "3. Hold your device steady\n" +
+                "4. Try different angles or distances (6-12 inches works best)\n" +
+                "5. Ensure good lighting");
         }
+
+        tensor.dispose();
       } catch (err) {
         console.error("Error during image analysis:", err);
         setError("Failed to analyze the image. Please try again.");
@@ -99,7 +183,7 @@ const Scanner = ({ onClose }) => {
 
   return (
     <div className="scanner-overlay">
-      <h2>Scan Heart Image</h2>
+      <h2>Scan Apple Image</h2>
       {error && <p className="error-message">{error}</p>}
       <video 
         ref={videoRef} 
@@ -109,8 +193,8 @@ const Scanner = ({ onClose }) => {
       />
       <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
       <p className="scanner-instructions">
-        Point the camera at a heart image in a book or on a screen. 
-        Ensure the image is well-lit, clear, and fills most of the camera view.
+        Point the camera at an apple image in a book, screen, or any source. 
+        Make sure the image is clear and well-lit.
       </p>
       <button onClick={captureImage} disabled={!model || !isScanning}>Scan</button>
       <button onClick={onClose}>Close Scanner</button>
