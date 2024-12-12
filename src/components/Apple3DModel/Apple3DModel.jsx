@@ -3,54 +3,50 @@ import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import './Apple3DModel.css';
 
-// Simple fallback component while loading
-const Loader = () => {
-  return (
-    <div className="loader">
-      <p>Loading 3D Model...</p>
-    </div>
-  );
-};
-
-// Simple apple using basic shapes
-function SimpleApple() {
-  return (
-    <group>
-      {/* Main apple body */}
-      <mesh>
-        <sphereGeometry args={[1, 32, 32]} />
-        <meshStandardMaterial color="#ff0000" metalness={0.1} roughness={0.2} />
-      </mesh>
-      
-      {/* Apple stem */}
-      <mesh position={[0, 1.2, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.5, 8]} />
-        <meshStandardMaterial color="#4d2600" />
-      </mesh>
-    </group>
-  );
+function Model() {
+  const { scene } = useGLTF('/models/apple.glb');
+  return <primitive object={scene} scale={0.05} position={[0, 0, 0]} />;
 }
+
+const Loader = () => (
+  <div className="loader">
+    <p>Loading 3D Model...</p>
+  </div>
+);
 
 const Apple3DModel = ({ onClose }) => {
   return (
     <div className="apple-3d-container">
       <div className="model-viewer">
         <Canvas
-          camera={{ position: [0, 0, 5], fov: 50 }}
+          camera={{ position: [8, 0, 0], fov: 30 }}
           style={{ background: '#1a1a1a' }}
+          gl={{ antialias: true }}
         >
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} intensity={1} />
-          <pointLight position={[-10, -10, -10]} intensity={0.5} />
-          
+          {/* Lighting setup */}
+          <ambientLight intensity={0.6} />
+          <spotLight
+            position={[5, 5, 5]}
+            angle={0.15}
+            penumbra={1}
+            intensity={1}
+            castShadow
+          />
+          <pointLight position={[-5, 5, 5]} intensity={0.5} />
+
           <Suspense fallback={<Loader />}>
-            <SimpleApple />
+            <Model />
           </Suspense>
-          
+
           <OrbitControls
             enableZoom={true}
             autoRotate={true}
             autoRotateSpeed={2}
+            minDistance={6}
+            maxDistance={12}
+            enableDamping
+            dampingFactor={0.05}
+            target={[0, 0, 0]}
           />
         </Canvas>
       </div>
@@ -61,5 +57,8 @@ const Apple3DModel = ({ onClose }) => {
     </div>
   );
 };
+
+// Pre-load the model
+useGLTF.preload('/models/apple.glb');
 
 export default Apple3DModel; 
