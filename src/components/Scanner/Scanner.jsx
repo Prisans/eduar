@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import './Scanner.css';
+import Apple3DModel from '../Apple3DModel/Apple3DModel';
 
 const Scanner = ({ onClose }) => {
   const [isScanning, setIsScanning] = useState(true);
@@ -9,6 +10,7 @@ const Scanner = ({ onClose }) => {
   const [error, setError] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const [show3DModel, setShow3DModel] = useState(false);
 
   useEffect(() => {
     const loadModel = async () => {
@@ -162,6 +164,9 @@ const Scanner = ({ onClose }) => {
           console.log("Matched predictions:", matchedPredictions);
           console.log("Total score:", totalScore);
           console.log("Best match:", bestMatch);
+          
+          // Show 3D model
+          setShow3DModel(true);
         } else {
           alert("No apple image detected. Please ensure:\n\n" +
                 "1. The apple image is clear and centered\n" +
@@ -182,23 +187,28 @@ const Scanner = ({ onClose }) => {
   };
 
   return (
-    <div className="scanner-overlay">
-      <h2>Scan Apple Image</h2>
-      {error && <p className="error-message">{error}</p>}
-      <video 
-        ref={videoRef} 
-        autoPlay 
-        playsInline 
-        className="scanner-video"
-      />
-      <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
-      <p className="scanner-instructions">
-        Point the camera at an apple image in a book, screen, or any source. 
-        Make sure the image is clear and well-lit.
-      </p>
-      <button onClick={captureImage} disabled={!model || !isScanning}>Scan</button>
-      <button onClick={onClose}>Close Scanner</button>
-    </div>
+    <>
+      <div className="scanner-overlay">
+        <h2>Scan Apple Image</h2>
+        {error && <p className="error-message">{error}</p>}
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          className="scanner-video"
+        />
+        <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
+        <p className="scanner-instructions">
+          Point the camera at an apple image in a book, screen, or any source. 
+          Make sure the image is clear and well-lit.
+        </p>
+        <button onClick={captureImage} disabled={!model || !isScanning}>Scan</button>
+        <button onClick={onClose}>Close Scanner</button>
+      </div>
+      {show3DModel && (
+        <Apple3DModel onClose={() => setShow3DModel(false)} />
+      )}
+    </>
   );
 };
 
