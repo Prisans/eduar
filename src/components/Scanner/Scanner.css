@@ -1,0 +1,81 @@
+.scanner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.scanner-overlay h2 {
+  color: white;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.scanner-video {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-bottom: 20px;
+  background-color: #000;
+}
+
+.scanner-overlay button {
+  margin: 10px;
+  padding: 12px 24px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.scanner-overlay button:first-of-type {
+  background-color: #2196F3;
+}
+
+@media screen and (max-width: 480px) {
+  .scanner-overlay h2 {
+    font-size: 1.2rem;
+  }
+
+  .scanner-video {
+    max-width: 95vw;
+  }
+
+  .scanner-overlay button {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Add this to your existing CSS */
+.error-message {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.1);
+  border: 1px solid #ff6b6b;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+  text-align: center;
+  max-width: 80%;
+}
+
+.scanner-instructions {
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  font-size: 0.9rem;
+  max-width: 80%;
+}
