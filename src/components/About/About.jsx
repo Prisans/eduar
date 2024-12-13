@@ -42,8 +42,7 @@ const About = () => {
       <div className="content">
         <h1>Why AR in Education?</h1>
         <p>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. 
-          Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+        AR in education makes learning interactive and engaging by using 3D visuals to simplify complex topics. It improves retention through immersive experiences and connects theory to real-world applications. AR also supports collaboration and accessibility, while being flexible with smartphone or tablet access, creating a dynamic learning environment.
         </p>
       </div>
     </div>
