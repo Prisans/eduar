@@ -7,6 +7,9 @@ const AppleAR = ({ onClose }) => {
   const containerRef = useRef(null);
   const [scale, setScale] = useState(0.05);
   const [hasVideoError, setHasVideoError] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const modelRef = useRef(null);
+  const lastTapRef = useRef(0);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -21,6 +24,7 @@ const AppleAR = ({ onClose }) => {
       alpha: true,
       powerPreference: 'high-performance'
     });
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     containerRef.current.appendChild(renderer.domElement);
 
@@ -41,12 +45,17 @@ const AppleAR = ({ onClose }) => {
 
     // Load the 3D model
     const loader = new GLTFLoader();
-    let model;
     loader.load('/models/apple.glb', (gltf) => {
-      model = gltf.scene;
+      const model = gltf.scene;
       model.scale.set(scale, scale, scale);
-      model.position.set(0, 0, 0);
+      
+      // Center the model
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      model.position.sub(center);
+      
       scene.add(model);
+      modelRef.current = model;
     });
 
     // Handle window resize
@@ -60,13 +69,13 @@ const AppleAR = ({ onClose }) => {
     };
     window.addEventListener('resize', handleResize);
 
-    // Add device orientation controls
+    // Handle device orientation controls
     let initialAlpha = null;
     let initialBeta = null;
     let initialGamma = null;
 
     const handleOrientation = (event) => {
-      if (!model) return;
+      if (!modelRef.current) return;
 
       if (initialAlpha === null) {
         initialAlpha = event.alpha;
@@ -79,43 +88,65 @@ const AppleAR = ({ onClose }) => {
       const beta = event.beta - initialBeta;
       const gamma = event.gamma - initialGamma;
 
-      model.rotation.y = THREE.MathUtils.degToRad(alpha);
-      model.rotation.x = THREE.MathUtils.degToRad(beta);
-      model.rotation.z = THREE.MathUtils.degToRad(gamma);
+      modelRef.current.rotation.y = THREE.MathUtils.degToRad(alpha);
+      modelRef.current.rotation.x = THREE.MathUtils.degToRad(beta);
+      modelRef.current.rotation.z = THREE.MathUtils.degToRad(gamma);
     };
 
-    // Handle pinch/wheel for resizing
+    // Handle touch controls
+    let touchStartX = 0;
+    let touchStartY = 0;
     let touchDistance = 0;
+
     const handleTouchStart = (event) => {
       if (event.touches.length === 2) {
         const dx = event.touches[0].clientX - event.touches[1].clientX;
         const dy = event.touches[0].clientY - event.touches[1].clientY;
         touchDistance = Math.sqrt(dx * dx + dy * dy);
+      } else if (event.touches.length === 1) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+        
+        const now = Date.now();
+        if (now - lastTapRef.current < 300) {
+          setShowControls(prev => !prev);
+        }
+        lastTapRef.current = now;
       }
     };
 
     const handleTouchMove = (event) => {
-      if (event.touches.length === 2 && model) {
+      if (!modelRef.current) return;
+
+      if (event.touches.length === 2) {
         const dx = event.touches[0].clientX - event.touches[1].clientX;
         const dy = event.touches[0].clientY - event.touches[1].clientY;
         const newDistance = Math.sqrt(dx * dx + dy * dy);
         
-        const delta = newDistance - touchDistance;
-        const newScale = Math.max(0.01, scale + delta * 0.0001);
+        const delta = (newDistance - touchDistance) * 0.001;
+        const newScale = Math.max(0.01, Math.min(0.2, scale + delta));
         setScale(newScale);
-        model.scale.set(newScale, newScale, newScale);
+        modelRef.current.scale.set(newScale, newScale, newScale);
         
         touchDistance = newDistance;
+      } else if (event.touches.length === 1) {
+        const dx = event.touches[0].clientX - touchStartX;
+        const dy = event.touches[0].clientY - touchStartY;
+        
+        modelRef.current.rotation.y += dx * 0.005;
+        modelRef.current.rotation.x += dy * 0.005;
+        
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
       }
     };
 
     const handleWheel = (event) => {
-      if (model) {
-        const delta = event.deltaY * -0.0001;
-        const newScale = Math.max(0.01, scale + delta);
-        setScale(newScale);
-        model.scale.set(newScale, newScale, newScale);
-      }
+      if (!modelRef.current) return;
+      const delta = event.deltaY * -0.0001;
+      const newScale = Math.max(0.01, Math.min(0.2, scale + delta));
+      setScale(newScale);
+      modelRef.current.scale.set(newScale, newScale, newScale);
     };
 
     // Request device orientation permission
@@ -131,22 +162,14 @@ const AppleAR = ({ onClose }) => {
       window.addEventListener('deviceorientation', handleOrientation);
     }
 
-    // Add event listeners for resizing
-    renderer.domElement.addEventListener('touchstart', handleTouchStart);
-    renderer.domElement.addEventListener('touchmove', handleTouchMove);
-    renderer.domElement.addEventListener('wheel', handleWheel);
-
-    // Animation loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    };
-    animate();
+    // Add event listeners
+    renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: true });
+    renderer.domElement.addEventListener('touchmove', handleTouchMove, { passive: true });
+    renderer.domElement.addEventListener('wheel', handleWheel, { passive: true });
 
     // Initialize video background
     const initializeVideoBackground = async () => {
       try {
-        // Try to get a list of available video devices
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         
@@ -154,28 +177,24 @@ const AppleAR = ({ onClose }) => {
           throw new Error('No video devices found');
         }
 
-        // Start with lower resolution constraints
-        const constraints = {
+        const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'environment',
             width: { ideal: 1280 },
             height: { ideal: 720 },
           }
-        };
+        });
 
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         const video = document.createElement('video');
         video.srcObject = stream;
-        video.playsInline = true; // Important for iOS
+        video.playsInline = true;
         
-        // Wait for video to be ready
         await new Promise((resolve) => {
           video.onloadedmetadata = () => {
             video.play().then(resolve).catch(resolve);
           };
         });
 
-        // Create video texture
         const videoTexture = new THREE.VideoTexture(video);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
@@ -199,6 +218,13 @@ const AppleAR = ({ onClose }) => {
 
     initializeVideoBackground();
 
+    // Animation loop
+    const animate = () => {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    };
+    animate();
+
     // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
@@ -213,20 +239,38 @@ const AppleAR = ({ onClose }) => {
     };
   }, [scale]);
 
+  const handleResize = (delta) => {
+    if (!modelRef.current) return;
+    const newScale = Math.max(0.01, Math.min(0.2, scale + delta));
+    setScale(newScale);
+    modelRef.current.scale.set(newScale, newScale, newScale);
+  };
+
   return (
     <div className="apple-ar-container">
       <div ref={containerRef} className="ar-viewer" />
-      <div className="ar-controls">
-        {hasVideoError ? (
-          <p className="ar-error">Camera access error. Please check your camera permissions and try again.</p>
-        ) : (
-          <p className="ar-instructions">
-            Move your device to view the 3D model<br/>
-            Pinch or use mouse wheel to resize
-          </p>
-        )}
-        <button onClick={onClose} className="close-button">Exit AR View</button>
-      </div>
+      {showControls && (
+        <>
+          {hasVideoError ? (
+            <div className="ar-instructions ar-error">
+              Camera access error. Please check your camera permissions and try again.
+            </div>
+          ) : (
+            <div className="ar-instructions">
+              • Double tap to show/hide controls<br/>
+              • Pinch or scroll to resize<br/>
+              • Drag to rotate
+            </div>
+          )}
+          <div className="resize-controls">
+            <button className="resize-button" onClick={() => handleResize(0.01)}>+</button>
+            <button className="resize-button" onClick={() => handleResize(-0.01)}>-</button>
+          </div>
+          <div className="ar-controls">
+            <button onClick={onClose} className="close-button">Exit AR</button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
