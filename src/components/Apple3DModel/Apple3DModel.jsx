@@ -1,7 +1,8 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, useGLTF } from '@react-three/drei';
 import './Apple3DModel.css';
+import AppleAR from './AppleAR';
 
 function Model() {
   const { scene } = useGLTF('/models/apple.glb');
@@ -15,6 +16,12 @@ const Loader = () => (
 );
 
 const Apple3DModel = ({ onClose }) => {
+  const [isARMode, setIsARMode] = useState(false);
+
+  if (isARMode) {
+    return <AppleAR onClose={() => setIsARMode(false)} />;
+  }
+
   return (
     <div className="apple-3d-container">
       <div className="model-viewer">
@@ -52,6 +59,7 @@ const Apple3DModel = ({ onClose }) => {
       </div>
       <div className="controls">
         <p>Drag to rotate • Scroll to zoom • Auto-rotating</p>
+        <button onClick={() => setIsARMode(true)} className="ar-button">View in AR</button>
         <button onClick={onClose}>Close 3D View</button>
       </div>
     </div>
@@ -61,4 +69,4 @@ const Apple3DModel = ({ onClose }) => {
 // Pre-load the model
 useGLTF.preload('/models/apple.glb');
 
-export default Apple3DModel; 
+export default Apple3DModel;
