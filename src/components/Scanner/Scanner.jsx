@@ -58,6 +58,7 @@ const Scanner = ({ onClose }) => {
   const startCamera = async () => {
     console.log("Starting camera...");
     setError(null);
+    setIsScanning(true);  // Reset scanning state when starting camera
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -73,11 +74,9 @@ const Scanner = ({ onClose }) => {
       } catch (err) {
         console.error("Error accessing the camera:", err);
         setError(`Error accessing the camera: ${err.message}. Please make sure you've granted camera permissions and try again.`);
-        setIsScanning(false);
       }
     } else {
       setError("Camera access is not available on this device or browser.");
-      setIsScanning(false);
     }
   };
 
