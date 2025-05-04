@@ -3,11 +3,13 @@ import * as tf from '@tensorflow/tfjs';
 import * as mobilenet from '@tensorflow-models/mobilenet';
 import './Scanner.css';
 import Apple3DModel from '../Apple3DModel/Apple3DModel';
+import Banana3DModel from '../Banana3DModel/Banana3DModel';
 
 const Scanner = ({ onClose }) => {
   const [isScanning, setIsScanning] = useState(true);
   const [model, setModel] = useState(null);
   const [error, setError] = useState(null);
+  const [detectedObject, setDetectedObject] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [show3DModel, setShow3DModel] = useState(false);
@@ -58,7 +60,6 @@ const Scanner = ({ onClose }) => {
   const startCamera = async () => {
     console.log("Starting camera...");
     setError(null);
-    setIsScanning(true);  // Reset scanning state when starting camera
     if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -96,27 +97,29 @@ const Scanner = ({ onClose }) => {
     return tensor;
   };
 
-  const captureImage = async () => {
-    if (videoRef.current && canvasRef.current && model) {
-      const context = canvasRef.current.getContext('2d');
-      
-      const videoWidth = videoRef.current.videoWidth;
-      const videoHeight = videoRef.current.videoHeight;
-      canvasRef.current.width = videoWidth;
-      canvasRef.current.height = videoHeight;
-      
-      context.clearRect(0, 0, videoWidth, videoHeight);
-      context.drawImage(videoRef.current, 0, 0, videoWidth, videoHeight);
-      
-      try {
-        const tensor = preprocessImage(canvasRef.current);
-        
-        // Get more predictions for better accuracy
-        const predictions = await model.classify(tensor, 20);
-        console.log("Raw predictions:", predictions);
+  const scanImage = async () => {
+    if (!videoRef.current || !canvasRef.current || !model) {
+      setError("Camera or image recognition model is not ready. Please try again.");
+      return;
+    }
 
-        // Simplified terms for apple detection
-        const appleRelatedTerms = [
+    const context = canvasRef.current.getContext('2d');
+    const videoWidth = videoRef.current.videoWidth;
+    const videoHeight = videoRef.current.videoHeight;
+    canvasRef.current.width = videoWidth;
+    canvasRef.current.height = videoHeight;
+    
+    context.clearRect(0, 0, videoWidth, videoHeight);
+    context.drawImage(videoRef.current, 0, 0, videoWidth, videoHeight);
+    
+    try {
+      const tensor = preprocessImage(canvasRef.current);
+      const predictions = await model.classify(tensor, 20);
+      console.log("Raw predictions:", predictions);
+
+      // Define detection terms for both apple and banana
+      const detectionTerms = {
+        apple: [
           { term: 'apple', weight: 2.0 },
           { term: 'fruit', weight: 1.5 },
           { term: 'red delicious', weight: 1.5 },
@@ -125,14 +128,27 @@ const Scanner = ({ onClose }) => {
           { term: 'green apple', weight: 1.5 },
           { term: 'produce', weight: 1.0 },
           { term: 'food', weight: 0.5 }
-        ];
+        ],
+        banana: [
+          { term: 'banana', weight: 2.0 },
+          { term: 'fruit', weight: 1.5 },
+          { term: 'plantain', weight: 1.5 },
+          { term: 'yellow banana', weight: 1.5 },
+          { term: 'ripe banana', weight: 1.5 },
+          { term: 'produce', weight: 1.0 },
+          { term: 'food', weight: 0.5 }
+        ]
+      };
 
+      // Calculate scores for both objects
+      const scores = {};
+      Object.keys(detectionTerms).forEach(objectType => {
         const matchedPredictions = predictions.map(prediction => {
           const predictionText = prediction.className.toLowerCase();
           let score = 0;
           let matchedTerms = [];
 
-          appleRelatedTerms.forEach(({ term, weight }) => {
+          detectionTerms[objectType].forEach(({ term, weight }) => {
             if (predictionText.includes(term)) {
               score += prediction.probability * weight;
               matchedTerms.push(term);
@@ -147,48 +163,49 @@ const Scanner = ({ onClose }) => {
         }).filter(p => p.score > 0);
 
         matchedPredictions.sort((a, b) => b.score - a.score);
-        const totalScore = matchedPredictions.reduce((sum, pred) => sum + pred.score, 0);
+        scores[objectType] = {
+          totalScore: matchedPredictions.reduce((sum, pred) => sum + pred.score, 0),
+          bestMatch: matchedPredictions[0] || null
+        };
+      });
+
+      // Determine which object was detected (if any)
+      const detectedScores = Object.entries(scores)
+        .filter(([type, score]) => score.totalScore > 0.1)
+        .sort(([typeA, dataA], [typeB, dataB]) => dataB.totalScore - dataA.totalScore);
+
+      if (detectedScores.length > 0) {
+        const [objectType, scoreData] = detectedScores[0];
+        setDetectedObject(objectType);
         
-        // Lower threshold for apple detection since it's simpler
-        const isApple = totalScore > 0.1 || 
-                       (matchedPredictions.length > 0 && matchedPredictions[0].score > 0.2);
-
-        if (isApple) {
-          const bestMatch = matchedPredictions[0];
-          
-          alert(`Apple Detected! 🍎\n` +
-                `Confidence: ${Math.round(totalScore * 100)}%\n` +
-                `Type: ${bestMatch.className}`);
-          
-          console.log("Matched predictions:", matchedPredictions);
-          console.log("Total score:", totalScore);
-          console.log("Best match:", bestMatch);
-          
-          // Show 3D model
-          setShow3DModel(true);
-        } else {
-          alert("No apple image detected. Please ensure:\n\n" +
-                "1. The apple image is clear and centered\n" +
-                "2. The image fills most of the camera frame\n" +
-                "3. Hold your device steady\n" +
-                "4. Try different angles or distances (6-12 inches works best)\n" +
-                "5. Ensure good lighting");
-        }
-
-        tensor.dispose();
-      } catch (err) {
-        console.error("Error during image analysis:", err);
-        setError("Failed to analyze the image. Please try again.");
+        alert(`${objectType.charAt(0).toUpperCase() + objectType.slice(1)} Detected! ${objectType === 'apple' ? '🍎' : '🍌'}\n` +
+              `Confidence: ${Math.round(scoreData.totalScore * 100)}%\n` +
+              `Type: ${scoreData.bestMatch?.className}`);
+        
+        console.log(`${objectType} detection:`, scoreData);
+        setShow3DModel(true);
+      } else {
+        setDetectedObject(null);
+        setShow3DModel(false);
+        alert("No apple or banana detected. Please ensure:\n\n" +
+              "1. The image is clear and centered\n" +
+              "2. The image fills most of the camera frame\n" +
+              "3. Hold your device steady\n" +
+              "4. Try different angles or distances (6-12 inches works best)\n" +
+              "5. Ensure good lighting");
       }
-    } else {
-      setError("Camera or image recognition model is not ready. Please try again.");
+
+      tensor.dispose();
+    } catch (err) {
+      console.error("Error during scanning:", err);
+      setError("Failed to analyze the image. Please try again.");
     }
   };
 
   return (
     <>
       <div className="scanner-overlay">
-        <h2>Scan Apple Image</h2>
+        <h2>Scan Apple or Banana</h2>
         {error && <p className="error-message">{error}</p>}
         <video 
           ref={videoRef} 
@@ -198,14 +215,17 @@ const Scanner = ({ onClose }) => {
         />
         <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
         <p className="scanner-instructions">
-          Point the camera at an apple image in a book, screen, or any source. 
-          Make sure the image is clear and well-lit.
+          Point the camera at an apple or banana, then click the Scan button.
         </p>
-        <button onClick={captureImage} disabled={!model || !isScanning}>Scan</button>
+        <button onClick={scanImage} disabled={!model || !isScanning}>Scan</button>
         <button onClick={onClose}>Close Scanner</button>
       </div>
       {show3DModel && (
-        <Apple3DModel onClose={() => setShow3DModel(false)} />
+        detectedObject === 'apple' ? (
+          <Apple3DModel onClose={() => setShow3DModel(false)} />
+        ) : (
+          <Banana3DModel onClose={() => setShow3DModel(false)} />
+        )
       )}
     </>
   );
