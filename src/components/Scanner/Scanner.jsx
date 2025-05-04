@@ -4,6 +4,9 @@ import * as mobilenet from '@tensorflow-models/mobilenet';
 import './Scanner.css';
 import Apple3DModel from '../Apple3DModel/Apple3DModel';
 import Banana3DModel from '../Banana3DModel/Banana3DModel';
+import NikeShoes3DModel from '../NikeShoes3DModel/NikeShoes3DModel';
+import Brain3DModel from '../Brain3DModel/Brain3DModel';
+import Bottle3DModel from '../Bottle3DModel/Bottle3DModel';
 
 const Scanner = ({ onClose }) => {
   const [isScanning, setIsScanning] = useState(true);
@@ -117,7 +120,7 @@ const Scanner = ({ onClose }) => {
       const predictions = await model.classify(tensor, 20);
       console.log("Raw predictions:", predictions);
 
-      // Define detection terms for both apple and banana
+      // Define detection terms for objects
       const detectionTerms = {
         apple: [
           { term: 'apple', weight: 2.0 },
@@ -137,10 +140,36 @@ const Scanner = ({ onClose }) => {
           { term: 'ripe banana', weight: 1.5 },
           { term: 'produce', weight: 1.0 },
           { term: 'food', weight: 0.5 }
+        ],
+        shoes: [
+          { term: 'shoe', weight: 2.0 },
+          { term: 'sneaker', weight: 2.0 },
+          { term: 'nike', weight: 2.0 },
+          { term: 'footwear', weight: 1.5 },
+          { term: 'running shoe', weight: 1.5 },
+          { term: 'athletic shoe', weight: 1.5 },
+          { term: 'sports shoe', weight: 1.5 }
+        ],
+        brain: [
+          { term: 'brain', weight: 2.0 },
+          { term: 'organ', weight: 1.5 },
+          { term: 'cerebral', weight: 1.5 },
+          { term: 'anatomy', weight: 1.5 },
+          { term: 'medical', weight: 1.0 },
+          { term: 'nervous system', weight: 1.0 }
+        ],
+        bottle: [
+          { term: 'bottle', weight: 2.0 },
+          { term: 'container', weight: 1.5 },
+          { term: 'water bottle', weight: 1.5 },
+          { term: 'plastic bottle', weight: 1.5 },
+          { term: 'glass bottle', weight: 1.5 },
+          { term: 'drink', weight: 1.0 },
+          { term: 'beverage', weight: 1.0 }
         ]
       };
 
-      // Calculate scores for both objects
+      // Calculate scores for objects
       const scores = {};
       Object.keys(detectionTerms).forEach(objectType => {
         const matchedPredictions = predictions.map(prediction => {
@@ -178,7 +207,15 @@ const Scanner = ({ onClose }) => {
         const [objectType, scoreData] = detectedScores[0];
         setDetectedObject(objectType);
         
-        alert(`${objectType.charAt(0).toUpperCase() + objectType.slice(1)} Detected! ${objectType === 'apple' ? '🍎' : '🍌'}\n` +
+        const emojis = {
+          apple: '🍎',
+          banana: '🍌',
+          shoes: '👟',
+          brain: '🧠',
+          bottle: '🍾'
+        };
+        
+        alert(`${objectType.charAt(0).toUpperCase() + objectType.slice(1)} Detected! ${emojis[objectType]}\n` +
               `Confidence: ${Math.round(scoreData.totalScore * 100)}%\n` +
               `Type: ${scoreData.bestMatch?.className}`);
         
@@ -187,7 +224,7 @@ const Scanner = ({ onClose }) => {
       } else {
         setDetectedObject(null);
         setShow3DModel(false);
-        alert("No apple or banana detected. Please ensure:\n\n" +
+        alert("No object detected. Please ensure:\n\n" +
               "1. The image is clear and centered\n" +
               "2. The image fills most of the camera frame\n" +
               "3. Hold your device steady\n" +
@@ -205,7 +242,7 @@ const Scanner = ({ onClose }) => {
   return (
     <>
       <div className="scanner-overlay">
-        <h2>Scan Apple or Banana</h2>
+        <h2>Object Scanner</h2>
         {error && <p className="error-message">{error}</p>}
         <video 
           ref={videoRef} 
@@ -215,7 +252,7 @@ const Scanner = ({ onClose }) => {
         />
         <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
         <p className="scanner-instructions">
-          Point the camera at an apple or banana, then click the Scan button.
+          Point the camera at an apple, banana, Nike shoes, brain, or bottle, then click the Scan button.
         </p>
         <button onClick={scanImage} disabled={!model || !isScanning}>Scan</button>
         <button onClick={onClose}>Close Scanner</button>
@@ -223,8 +260,14 @@ const Scanner = ({ onClose }) => {
       {show3DModel && (
         detectedObject === 'apple' ? (
           <Apple3DModel onClose={() => setShow3DModel(false)} />
-        ) : (
+        ) : detectedObject === 'banana' ? (
           <Banana3DModel onClose={() => setShow3DModel(false)} />
+        ) : detectedObject === 'shoes' ? (
+          <NikeShoes3DModel onClose={() => setShow3DModel(false)} />
+        ) : detectedObject === 'brain' ? (
+          <Brain3DModel onClose={() => setShow3DModel(false)} />
+        ) : (
+          <Bottle3DModel onClose={() => setShow3DModel(false)} />
         )
       )}
     </>
