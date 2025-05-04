@@ -252,7 +252,7 @@ const Scanner = ({ onClose }) => {
         />
         <canvas ref={canvasRef} style={{ display: 'none' }} width="224" height="224" />
         <p className="scanner-instructions">
-          Point the camera at an apple, banana, Nike shoes, brain, or bottle, then click the Scan button.
+          Point the camera at the object you want to scan, then click the Scan button.
         </p>
         <button onClick={scanImage} disabled={!model || !isScanning}>Scan</button>
         <button onClick={onClose}>Close Scanner</button>
